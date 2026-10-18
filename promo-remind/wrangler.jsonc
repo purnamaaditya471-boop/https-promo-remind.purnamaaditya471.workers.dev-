@@ -10,7 +10,7 @@
   "kv_namespaces": [
     {
       "binding": "PROMOS",
-      "id": "KV"
+      "id": "promo-remind-data"
     }
   ]
 }
