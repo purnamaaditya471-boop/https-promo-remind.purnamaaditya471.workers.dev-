@@ -10,7 +10,7 @@
   "kv_namespaces": [
     {
       "binding": "PROMOS",
-      "id": "GANTI_DENGAN_ID_KV"
+      "id": "KV"
     }
   ]
 }
