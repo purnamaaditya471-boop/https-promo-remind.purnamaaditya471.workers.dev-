@@ -371,7 +371,7 @@
                     <div>
                         <label class="block text-[11px] font-bold uppercase text-slate-300 mb-1">1. Pilih Gambar Poster (bisa banyak sekaligus)</label>
                         <input type="file" id="bulkFiles" accept="image/*" multiple class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-400 file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer transition">
-                        <p class="mt-1 text-[11px] text-slate-500">Maksimal ${MAX_FILES} gambar sekali unggah. Tanpa spreadsheet, urutan mengikuti nama file dan judul diambil dari nama file.</p>
+                        <p class="mt-1 text-[11px] text-slate-500">Maksimal ${MAX_FILES} gambar sekali unggah. Tanpa spreadsheet, urutan mengikuti nama file, judul diambil dari nama file, dan tanggal diisi di tiap baris.</p>
                     </div>
 
                     <div class="rounded-xl border border-slate-800 bg-slate-950 p-3 space-y-2">
@@ -380,20 +380,6 @@
                         <p class="text-[11px] text-slate-500">Kolom: <b class="text-slate-300">Gambar</b> (nama file), <b class="text-slate-300">Judul</b>, <b class="text-slate-300">Mulai</b>, <b class="text-slate-300">Berakhir</b>, <b class="text-slate-300">Deskripsi</b>. Format .ods, .xlsx, atau .csv. Urutan baris menjadi urutan katalog.
                             <a href="template-promo.ods" download class="text-indigo-400 underline hover:text-indigo-300">Unduh contoh file (.ods)</a></p>
                         <p id="bulkSheetInfo" class="hidden text-[11px] whitespace-pre-line"></p>
-                    </div>
-
-                    <div>
-                        <label class="block text-[11px] font-bold uppercase text-slate-300 mb-1">Tanggal untuk semua (jika di spreadsheet kosong)</label>
-                        <div class="grid grid-cols-2 gap-2.5">
-                            <div>
-                                <label for="bulkStart" class="block text-[11px] text-slate-400 mb-1">Mulai</label>
-                                <input type="date" id="bulkStart" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500 transition cursor-pointer">
-                            </div>
-                            <div>
-                                <label for="bulkEnd" class="block text-[11px] text-slate-400 mb-1">Berakhir</label>
-                                <input type="date" id="bulkEnd" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500 transition cursor-pointer">
-                            </div>
-                        </div>
                     </div>
 
                     <label class="flex items-center gap-2 cursor-pointer bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5">
@@ -417,13 +403,9 @@
 
         $('bulkFiles').addEventListener('change', onFilesChosen);
         $('bulkSheet').addEventListener('change', onSheetChosen);
-        $('bulkStart').addEventListener('change', () => applySharedDate('start'));
-        $('bulkEnd').addEventListener('change', () => applySharedDate('end'));
         $('bulkSave').addEventListener('click', saveAll);
         $('bulkCancel').addEventListener('click', () => closeModal());
         $('bulkCloseX').addEventListener('click', () => closeModal());
-
-        modal.querySelectorAll('input[type="date"]').forEach(attachPicker);
     }
 
     function attachPicker(input) {
@@ -479,10 +461,10 @@
             dates.className = 'grid grid-cols-2 gap-2';
             const start = document.createElement('input');
             start.type = 'date'; start.value = r.start; start.className = inputClass() + ' cursor-pointer';
-            start.addEventListener('input', () => { r.start = start.value; r.startFromSheet = true; });
+            start.addEventListener('input', () => { r.start = start.value; });
             const end = document.createElement('input');
             end.type = 'date'; end.value = r.end; end.className = inputClass() + ' cursor-pointer';
-            end.addEventListener('input', () => { r.end = end.value; r.endFromSheet = true; });
+            end.addEventListener('input', () => { r.end = end.value; });
             attachPicker(start); attachPicker(end);
             dates.append(start, end);
 
@@ -564,14 +546,12 @@
                 id: ++seq,
                 file,
                 title: titleFromName(file.name),
-                start: $('bulkStart').value,
-                end: $('bulkEnd').value,
+                start: '',
+                end: '',
                 desc: '',
                 status: 'idle',
                 message: '',
                 applied: false,
-                startFromSheet: false,
-                endFromSheet: false,
                 thumb: URL.createObjectURL(file)
             });
         });
@@ -586,7 +566,7 @@
             const entries = tableToEntries(await readTable(file));
             sheet = entries;
             sheetUsed = new Set();
-            rows.forEach((r) => { r.applied = false; r.startFromSheet = false; r.endFromSheet = false; });
+            rows.forEach((r) => { r.applied = false; });
             applySheet();
         } catch (err) {
             console.error(err);
@@ -631,11 +611,11 @@
             if (s.desc) row.desc = s.desc;
             if (s.start) {
                 const d = parseDate(s.start);
-                if (d) { row.start = d; row.startFromSheet = true; } else badDates.push((s.image || s.title) + ' (mulai: ' + s.start + ')');
+                if (d) { row.start = d; } else badDates.push((s.image || s.title) + ' (mulai: ' + s.start + ')');
             }
             if (s.end) {
                 const d = parseDate(s.end);
-                if (d) { row.end = d; row.endFromSheet = true; } else badDates.push((s.image || s.title) + ' (berakhir: ' + s.end + ')');
+                if (d) { row.end = d; } else badDates.push((s.image || s.title) + ' (berakhir: ' + s.end + ')');
             }
         });
 
@@ -663,24 +643,13 @@
         }
         if (rows.length && noSheetRows) {
             kind = 'warn';
-            lines.push(noSheetRows + ' gambar tidak ada di spreadsheet (judul dari nama file, tanggal dari isian "untuk semua").');
+            lines.push(noSheetRows + ' gambar tidak ada di spreadsheet (judul dari nama file, isi tanggalnya di barisnya).');
         }
         if (badDates.length) {
             kind = 'warn';
             lines.push('Tanggal tidak dikenali: ' + badDates.slice(0, 5).join('; ') + '. Perbaiki di baris terkait.');
         }
         showSheetInfo(kind, lines.join('\n'));
-    }
-
-    function applySharedDate(which) {
-        const value = $(which === 'start' ? 'bulkStart' : 'bulkEnd').value;
-        rows.forEach((r) => {
-            if (r.status === 'done') return;
-            if (which === 'start' ? r.startFromSheet : r.endFromSheet) return;   // jangan timpa tanggal dari spreadsheet
-            r[which] = value;
-            const input = which === 'start' ? r.startEl : r.endEl;
-            if (input) input.value = value;
-        });
     }
 
     function removeRow(id) {
@@ -809,8 +778,6 @@
         rows = [];
         sheet = [];
         sheetUsed = new Set();
-        $('bulkStart').value = '';
-        $('bulkEnd').value = '';
         showSheetInfo('', '');
         renderRows();
     }
