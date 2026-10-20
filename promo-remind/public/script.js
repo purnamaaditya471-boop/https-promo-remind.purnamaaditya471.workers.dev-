@@ -6,18 +6,25 @@ let promoList = [];
 let filteredPromos = [];
 let currentSlideIndex = 0;
 let deleteTargetId = null;
+let isLoadingPromos = true;
 
 function isAdminLoggedIn() {
     return !!getToken();
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-    await loadPromoData();
-    checkAuthStatus();
+    // Tampilkan kerangka halaman lebih dulu, data promo menyusul dari server
     populateDropdowns();
-    updateDashboard();
     setupDateInputs();
     setupTouchSwipe();
+    checkAuthStatus();
+    renderCarousel();
+
+    await loadPromoData();
+    isLoadingPromos = false;
+
+    checkAuthStatus();
+    updateDashboard();
 });
 
 function setupDateInputs() {
@@ -34,29 +41,34 @@ function setupDateInputs() {
 function setupTouchSwipe() {
     const slider = document.getElementById('promoDisplaySection');
     let startX = 0;
-    let endX = 0;
+    let startY = 0;
+    let tracking = false;
 
     if (!slider) return;
 
     slider.addEventListener('touchstart', (e) => {
-        startX = e.changedTouches[0].screenX;
+        if (e.touches.length !== 1) { tracking = false; return; }
+        startX = e.changedTouches[0].clientX;
+        startY = e.changedTouches[0].clientY;
+        tracking = true;
     }, { passive: true });
+
+    // Jika browser mulai menggulir halaman (gerak vertikal), batalkan deteksi geser
+    slider.addEventListener('touchcancel', () => { tracking = false; }, { passive: true });
 
     slider.addEventListener('touchend', (e) => {
-        endX = e.changedTouches[0].screenX;
-        handleSwipe();
-    }, { passive: true });
+        if (!tracking) return;
+        tracking = false;
+        const dx = startX - e.changedTouches[0].clientX;
+        const dy = startY - e.changedTouches[0].clientY;
 
-    function handleSwipe() {
-        const diff = startX - endX;
-        if (Math.abs(diff) > 40) {
-            if (diff > 0) {
-                window.nextSlide();
-            } else {
-                window.prevSlide();
-            }
+        // Hanya geser yang dominan ke samping yang mengganti slide.
+        // Gerakan naik/turun dibiarkan menjadi scroll halaman.
+        if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+            if (dx > 0) window.nextSlide();
+            else window.prevSlide();
         }
-    }
+    }, { passive: true });
 }
 
 const cloneData = (x) => JSON.parse(JSON.stringify(x));
@@ -589,10 +601,14 @@ function renderCarousel() {
     sliderContainer.innerHTML = '';
     dotsContainer.innerHTML = '';
 
+    const loadingState = document.getElementById('loadingState');
+    if (loadingState) loadingState.classList.toggle('hidden', !isLoadingPromos);
+
     if (filteredPromos.length === 0) {
         if (emptyState) {
-            emptyState.classList.remove('hidden');
-            emptyState.classList.add('flex');
+            const showEmpty = !isLoadingPromos;
+            emptyState.classList.toggle('hidden', !showEmpty);
+            emptyState.classList.toggle('flex', showEmpty);
         }
         const emptyCaption = document.getElementById('promoCaption');
         if (emptyCaption) emptyCaption.classList.add('hidden');
@@ -622,7 +638,7 @@ function renderCarousel() {
         slide.style.transform = `translateX(-${currentSlideIndex * 100}%)`;
 
         slide.innerHTML = `
-            <img src="${escapeHtml(promo.imageUrl)}" alt="${escapeHtml(promo.title)}" class="w-full h-full object-contain select-none" draggable="false">
+            <img src="${escapeHtml(promo.imageUrl)}" alt="${escapeHtml(promo.title)}" class="w-full h-full object-contain select-none" draggable="false" decoding="async" fetchpriority="${idx === currentSlideIndex ? 'high' : 'low'}">
         `;
         sliderContainer.appendChild(slide);
 
@@ -677,9 +693,10 @@ function renderTable() {
     tableBody.innerHTML = '';
 
     if (filteredPromos.length === 0) {
+        const message = isLoadingPromos ? 'Memuat promo...' : 'Tidak ada promo pada periode yang dipilih.';
         tableBody.innerHTML = `
             <tr>
-                <td colspan="5" class="py-6 text-center text-slate-500">Tidak ada promo pada periode yang dipilih.</td>
+                <td colspan="5" class="py-6 text-center text-slate-500">${message}</td>
             </tr>
         `;
         return;
@@ -693,15 +710,15 @@ function renderTable() {
 
         const actionCellHtml = isLogged 
             ? `<button onclick="window.askDeletePromo('${promo.id}')" class="text-rose-400 hover:text-rose-300 p-1.5 rounded-lg hover:bg-rose-500/10 transition" title="Hapus Promo">
-                    <i class="fa-solid fa-trash-can"></i>
+                    <svg class="icon" aria-hidden="true"><use href="#i-s-trash-can"/></svg>
                </button>`
             : `<span class="text-slate-600 text-[11px] flex items-center justify-end gap-1" title="Hanya Admin yang dapat menghapus">
-                    <i class="fa-solid fa-lock text-[10px]"></i> Kunci
+                    <svg class="icon text-[10px]" aria-hidden="true"><use href="#i-s-lock"/></svg> Kunci
                </span>`;
 
         tr.innerHTML = `
             <td class="py-2.5 px-3 sm:px-4">
-                <img src="${escapeHtml(promo.imageUrl)}" class="w-8 h-11 sm:w-10 sm:h-14 object-cover rounded-md border border-slate-800" alt="thumb">
+                <img src="${escapeHtml(promo.imageUrl)}" class="w-8 h-11 sm:w-10 sm:h-14 object-cover rounded-md border border-slate-800" alt="thumb" loading="lazy" decoding="async" fetchpriority="low">
             </td>
             <td class="py-2.5 px-3 sm:px-4 font-bold text-white max-w-[160px] sm:max-w-none truncate">${escapeHtml(promo.title)}</td>
             <td class="py-2.5 px-3 sm:px-4 text-slate-400 text-xs whitespace-nowrap">${formatDate(promo.startDate)} - ${formatDate(promo.endDate)}</td>
