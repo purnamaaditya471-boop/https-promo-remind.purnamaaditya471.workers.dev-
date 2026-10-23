@@ -275,6 +275,24 @@ async function handleApi(request, env, url) {
     }
 
     const del = /^\/api\/promos\/([\w-]+)$/.exec(path);
+
+    // Ubah judul, tanggal, dan deskripsi (gambar tidak berubah)
+    if (del && method === 'PUT') {
+        const id = del[1];
+        const body = await readJson(request);
+        const list = await loadPromos(env, request);
+        const idx = list.findIndex(p => p.id === id);
+        if (idx < 0) return json({ error: 'Promo tidak ditemukan.' }, 404);
+
+        const updated = cleanPromo({ ...body, id });
+        if (!updated) return json({ error: 'Data promo tidak valid (cek judul dan tanggal).' }, 400);
+
+        updated.imageUrl = list[idx].imageUrl;
+        list[idx] = updated;
+        await env.PROMOS.put('promos', JSON.stringify(list));
+        return json({ promo: updated });
+    }
+
     if (del && method === 'DELETE') {
         const id = del[1];
         const list = await loadPromos(env, request);
