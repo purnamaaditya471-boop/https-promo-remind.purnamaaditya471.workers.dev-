@@ -83,3 +83,7 @@
         .cat-tabs button:hover { border-color: var(--cat); }
         .cat-tabs button.active { background: var(--cat); border-color: var(--cat); color: #0b1020; }
     }
+
+    /* Toast tidak boleh menangkap sentuhan (sebelumnya menutupi tombol menu kanan) */
+    #toast { pointer-events: none; }
+    .cat-nav { z-index: 60; }
