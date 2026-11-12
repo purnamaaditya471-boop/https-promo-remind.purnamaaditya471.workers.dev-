@@ -1,0 +1,85 @@
+    body {
+        font-family: 'Inter', sans-serif;
+    }
+
+    /* Native Date Picker Style */
+    input[type="date"] {
+        color-scheme: dark;
+        position: relative;
+        z-index: 20;
+        cursor: pointer;
+    }
+
+    input[type="date"]::-webkit-calendar-picker-indicator {
+        cursor: pointer;
+        filter: invert(0.9);
+        padding: 4px;
+        border-radius: 4px;
+    }
+
+    input[type="date"]::-webkit-calendar-picker-indicator:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    /* Transitions Slide */
+    .slide-transition {
+        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+        background: #090d16;
+    }
+    ::-webkit-scrollbar-thumb {
+        background: #1e293b;
+        border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+        background: #334155;
+    }
+
+    /* ===== Daftar promo: > 10 promo jadi ringkas & bisa di-scroll ===== */
+    .promo-scroll { max-height: 360px; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
+    .promo-scroll thead th { position: sticky; top: 0; z-index: 2; background: #090d16; }
+    .promo-compact td { padding-top: .3rem !important; padding-bottom: .3rem !important; }
+    .promo-compact td img { width: 26px !important; height: 37px !important; }
+    @media (min-width: 640px) { .promo-scroll { max-height: 440px; } }
+
+    /* ===== Menu kategori ===== */
+    :root { --cat: #818cf8; }
+    body[data-cat="hobbies"]     { --cat: #a78bfa; }
+    body[data-cat="living"]      { --cat: #2dd4bf; }
+    body[data-cat="improvement"] { --cat: #fb923c; }
+
+    .cat-tabs { display: none; }
+    .cat-nav {
+        position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+        display: flex; gap: 2px; padding: 6px 8px calc(8px + env(safe-area-inset-bottom, 0px));
+        background: #0f172a; border-top: 1px solid #1e293b;
+    }
+    .cat-nav button {
+        flex: 1; min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 3px; background: none; border: 0; color: #94a3b8; font-size: 10.5px; font-weight: 600; cursor: pointer;
+    }
+    .cat-nav .pill { width: 48px; height: 28px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 20px; transition: background .2s; }
+    .cat-nav button.active { color: var(--cat); }
+    .cat-nav button.active .pill { background: color-mix(in srgb, var(--cat) 18%, transparent); }
+
+    @media (max-width: 1023px) {
+        body { padding-bottom: 84px; }
+        #toast { bottom: 88px !important; }
+    }
+    @media (min-width: 1024px) {
+        .cat-nav { display: none; }
+        .cat-tabs { display: flex; gap: 8px; max-width: 80rem; margin: 0 auto; width: 100%; padding: 12px 2rem 0; box-sizing: border-box; }
+        .cat-tabs button {
+            display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 16px; border-radius: 19px;
+            background: #0f172a; border: 1px solid #243049; color: #cbd5e1; font-size: 13px; font-weight: 700; cursor: pointer;
+        }
+        .cat-tabs button:hover { border-color: var(--cat); }
+        .cat-tabs button.active { background: var(--cat); border-color: var(--cat); color: #0b1020; }
+    }
