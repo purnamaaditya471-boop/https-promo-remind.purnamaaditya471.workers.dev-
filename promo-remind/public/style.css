@@ -87,3 +87,10 @@
     /* Toast tidak boleh menangkap sentuhan (sebelumnya menutupi tombol menu kanan) */
     #toast { pointer-events: none; }
     .cat-nav { z-index: 60; }
+
+/* ===== Baris daftar promo bisa diklik & sinkron dengan POP ===== */
+.promo-row { cursor: pointer; outline: none; }
+.promo-row:hover { background: rgba(15, 23, 42, .6); }
+.promo-row:focus-visible { box-shadow: inset 0 0 0 2px var(--cat); }
+.promo-row.is-active { background: color-mix(in srgb, var(--cat) 14%, transparent); }
+.promo-row.is-active td:first-child { box-shadow: inset 3px 0 0 var(--cat); }
