@@ -5,13 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Remind Promo Azko</title>
     <link rel="icon" type="image/png" href="logo.png?v=2">
-    <link rel="apple-touch-icon" href="logo.png?v=2">
+    <link rel="apple-touch-icon" href="icon-maskable-512.png">
+    <link rel="manifest" href="manifest.webmanifest">
+    <meta name="theme-color" content="#0f172a">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="tailwind.css?v=2">
     
-    <link rel="stylesheet" href="style.css?v=7">
+    <link rel="stylesheet" href="style.css?v=8">
 </head>
 <body class="min-h-screen flex flex-col antialiased bg-slate-950 text-slate-100 selection:bg-indigo-500 selection:text-white">
     <!-- Ikon (SVG tertanam, menggantikan Font Awesome) -->
@@ -179,6 +181,10 @@
                 <div id="promoCaption" class="hidden mx-auto max-w-xs sm:max-w-sm lg:max-w-full w-full bg-slate-900/80 border border-slate-800 border-l-4 border-l-indigo-500 rounded-2xl px-4 py-3 shadow-xl space-y-1">
                     <h3 id="captionTitle" class="text-sm sm:text-base font-black text-white leading-tight break-words"></h3>
                     <div id="captionDesc" class="mt-2 pt-2 border-t border-slate-800 text-xs sm:text-sm text-slate-300 leading-relaxed break-words"></div>
+                    <div class="caption-actions">
+                        <button type="button" class="act-btn" onclick="window.copyPromoLink()">Salin Link</button>
+                        <button type="button" class="act-btn" onclick="window.copyPromoWa()">Salin Teks WA</button>
+                    </div>
                 </div>
             </section>
         </div>
@@ -194,10 +200,22 @@
                     <span id="promoListCount" class="text-[11px] text-slate-400"></span>
                 </div>
 
+                <div class="list-toolbar">
+                    <input type="search" id="searchPromo" placeholder="Cari judul promo..." autocomplete="off" oninput="window.handleListFilter()" class="bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white font-semibold focus:outline-none focus:border-indigo-500 transition">
+                    <select id="filterStatus" onchange="window.handleListFilter()" class="bg-slate-950 border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white font-semibold focus:outline-none focus:border-indigo-500 transition cursor-pointer">
+                        <option value="all">Semua status</option>
+                        <option value="active">Aktif</option>
+                        <option value="soon">Segera berakhir</option>
+                        <option value="claim">Masa klaim voucher</option>
+                        <option value="ended">Kedaluwarsa</option>
+                    </select>
+                </div>
+
                 <div id="promoTableWrap" class="overflow-x-auto -mx-1 sm:mx-0">
                     <table class="w-full text-left text-xs sm:text-sm text-slate-300 min-w-[500px]">
                         <thead class="bg-slate-950/80 uppercase text-[10px] font-bold text-slate-400 tracking-wider">
                             <tr>
+                                <th class="col-select py-2.5 px-3 sm:px-4 rounded-l-xl"><input type="checkbox" id="selectAllRows" aria-label="Pilih semua" onchange="window.toggleSelectAll(this.checked)"></th>
                                 <th class="py-2.5 px-3 sm:px-4 rounded-l-xl">Gambar</th>
                                 <th class="py-2.5 px-3 sm:px-4">Judul Promo</th>
                                 <th class="py-2.5 px-3 sm:px-4">Periode</th>
@@ -330,7 +348,13 @@
                     </div>
                 </div>
 
-                <p id="editImageNote" class="hidden text-[11px] text-slate-500">Gambar poster tidak bisa diganti dari sini. Untuk mengganti gambar, hapus promo lalu unggah ulang.</p>
+                <div>
+                    <label for="inputClaimEndDate" class="block text-[11px] font-bold uppercase text-slate-300 mb-1">Voucher / Cashback berlaku s/d <span class="text-slate-500 normal-case font-medium">(opsional)</span></label>
+                    <input type="date" id="inputClaimEndDate" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500 transition cursor-pointer">
+                    <p class="mt-1 text-[11px] text-slate-500">Isi jika voucher masih bisa dipakai setelah promo berakhir. Poster tetap tampil dengan status "Masa Klaim" sampai tanggal ini.</p>
+                </div>
+
+                <p id="editImageNote" class="hidden text-[11px] text-slate-500">Kosongkan kolom gambar di bawah jika gambar poster tidak ingin diganti.</p>
 
                 <div id="imageFieldBlock">
                     <label class="block text-[11px] font-bold uppercase text-slate-300 mb-1">Gambar Poster A4 *</label>
@@ -405,7 +429,21 @@
     </div>
 
     <!-- JAVASCRIPT LOGIC -->
-    <script src="script.js?v=6"></script>
+    <!-- Bilah aksi pilih banyak (admin) -->
+    <div id="bulkBar" class="bulk-bar" role="region" aria-label="Aksi promo terpilih">
+        <span id="bulkCount" class="bulk-count">0 dipilih</span>
+        <select id="bulkCategory" aria-label="Pindahkan ke menu">
+            <option value="">Utama</option>
+            <option value="hobbies">Hobbies and Lifestyle</option>
+            <option value="living">Home Living</option>
+            <option value="improvement">Home Improvement</option>
+        </select>
+        <button type="button" onclick="window.bulkMove()">Pindahkan</button>
+        <button type="button" class="danger" onclick="window.bulkDelete()">Hapus</button>
+        <button type="button" class="ghost" onclick="window.bulkClear()">Batal</button>
+    </div>
+
+    <script src="script.js?v=7"></script>
     <!-- JAVASCRIPT UNTUK UNGGAH SEKALIGUS -->
     <script src="bulk.js?v=2"></script>
     

@@ -94,3 +94,43 @@
 .promo-row:focus-visible { box-shadow: inset 0 0 0 2px var(--cat); }
 .promo-row.is-active { background: color-mix(in srgb, var(--cat) 14%, transparent); }
 .promo-row.is-active td:first-child { box-shadow: inset 3px 0 0 var(--cat); }
+
+/* ===== Pencarian & filter daftar ===== */
+.list-toolbar { display: flex; flex-wrap: wrap; gap: 8px; }
+.list-toolbar #searchPromo { flex: 1 1 180px; min-width: 0; }
+.list-toolbar #filterStatus { flex: 0 1 190px; min-width: 0; }
+
+/* ===== Baris berakhir, badge, catatan voucher ===== */
+.promo-row.is-ended td:not(.col-select):not(:last-child) { opacity: .55; }
+.promo-row.is-selected { background: rgba(99, 102, 241, .10); }
+.promo-claim-note { margin-top: 2px; font-size: 10px; font-weight: 600; color: #fbbf24; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.badge-soon, .badge-claim { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 10px; font-weight: 700; border: 1px solid; }
+.badge-soon  { background: rgba(245, 158, 11, .12); color: #fbbf24; border-color: rgba(245, 158, 11, .3); }
+.badge-claim { background: rgba(14, 165, 233, .12); color: #38bdf8; border-color: rgba(14, 165, 233, .3); }
+
+/* ===== Kolom centang (hanya admin) ===== */
+.col-select { display: none; width: 34px; }
+body.is-admin .col-select { display: table-cell; }
+body.is-admin #promoTableWrap thead th:nth-child(2) { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+.col-select input { width: 16px; height: 16px; cursor: pointer; accent-color: #6366f1; }
+
+/* ===== Tombol bagikan di bawah poster ===== */
+.caption-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid #1e293b; }
+.act-btn { height: 32px; padding: 0 12px; border-radius: 10px; background: #0f172a; border: 1px solid #243049; color: #cbd5e1; font-size: 12px; font-weight: 700; cursor: pointer; transition: border-color .15s, color .15s; }
+.act-btn:hover { border-color: var(--cat); color: #fff; }
+
+/* ===== Bilah pilih banyak ===== */
+.bulk-bar {
+    position: fixed; left: 50%; bottom: 20px; z-index: 70; transform: translate(-50%, 140%);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center;
+    max-width: calc(100vw - 16px); padding: 10px 12px; border-radius: 16px;
+    background: #0f172a; border: 1px solid #334155; box-shadow: 0 10px 40px rgba(0, 0, 0, .55);
+    transition: transform .25s cubic-bezier(.4, 0, .2, 1), opacity .2s, visibility .2s; pointer-events: none; opacity: 0; visibility: hidden;
+}
+.bulk-bar.show { transform: translate(-50%, 0); pointer-events: auto; opacity: 1; visibility: visible; }
+.bulk-count { font-size: 12px; font-weight: 800; color: #fff; padding: 0 4px; }
+.bulk-bar select { height: 34px; padding: 0 8px; border-radius: 10px; background: #020617; border: 1px solid #334155; color: #fff; font-size: 12px; font-weight: 600; }
+.bulk-bar button { height: 34px; padding: 0 14px; border-radius: 10px; border: 0; background: #4f46e5; color: #fff; font-size: 12px; font-weight: 700; cursor: pointer; }
+.bulk-bar button.danger { background: #e11d48; }
+.bulk-bar button.ghost { background: transparent; border: 1px solid #334155; color: #cbd5e1; }
+@media (max-width: 1023px) { .bulk-bar { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); } }

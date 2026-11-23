@@ -220,8 +220,11 @@ function cleanPromo(p) {
     const endDate = String(p.endDate || '');
     if (!id || !title || !validDate(startDate) || !validDate(endDate) || startDate > endDate) return null;
     const category = CATEGORIES.includes(p.category) ? p.category : '';
+    // Masa klaim voucher (opsional): tidak boleh sebelum tanggal promo berakhir
+    const claimEndDate = String(p.claimEndDate || '');
+    if (claimEndDate && (!validDate(claimEndDate) || claimEndDate < endDate)) return null;
     return {
-        id, title, startDate, endDate, category,
+        id, title, startDate, endDate, category, claimEndDate,
         imageUrl: '',
         description: String(p.description || '').slice(0, 5000)
     };
@@ -251,6 +254,34 @@ async function handleApi(request, env, url) {
     // Semua di bawah ini khusus admin
     if (!(await isAdmin(request, env))) {
         return json({ error: 'Sesi login berakhir. Silakan login ulang.' }, 401);
+    }
+
+    // Pindah menu / hapus banyak promo sekaligus (maks. 40 per permintaan)
+    if (path === '/api/promos/bulk' && method === 'POST') {
+        const body = await readJson(request);
+        const ids = (Array.isArray(body.ids) ? body.ids : [])
+            .map(x => String(x).replace(/[^\w-]/g, '')).filter(Boolean).slice(0, 40);
+        if (!ids.length) return json({ error: 'Tidak ada promo yang dipilih.' }, 400);
+        const set = new Set(ids);
+        let list = await loadPromos(env, request);
+
+        if (body.action === 'move') {
+            const category = String(body.category || '');
+            if (category && !CATEGORIES.includes(category)) return json({ error: 'Menu tidak valid.' }, 400);
+            let count = 0;
+            list = list.map(p => set.has(p.id) ? (count++, { ...p, category }) : p);
+            await env.PROMOS.put('promos', JSON.stringify(list));
+            return json({ ok: true, count });
+        }
+        if (body.action === 'delete') {
+            const gone = list.filter(p => set.has(p.id));
+            await env.PROMOS.put('promos', JSON.stringify(list.filter(p => !set.has(p.id))));
+            await Promise.all(gone
+                .filter(p => String(p.imageUrl).startsWith('/img/'))
+                .map(p => env.PROMOS.delete('img:' + String(p.imageUrl).slice('/img/'.length))));
+            return json({ ok: true, count: gone.length });
+        }
+        return json({ error: 'Aksi tidak dikenal.' }, 400);
     }
 
     if (path === '/api/promos' && method === 'POST') {
@@ -292,8 +323,30 @@ async function handleApi(request, env, url) {
         if (!updated) return json({ error: 'Data promo tidak valid (cek judul dan tanggal).' }, 400);
 
         updated.imageUrl = list[idx].imageUrl;
+
+        // Ganti gambar (opsional). Pakai id baru supaya cache browser (1 tahun) tidak menampilkan gambar lama.
+        let oldImageId = null;
+        const img = String(body.imageUrl || '');
+        if (img) {
+            let newUrl;
+            if (img.startsWith('data:')) {
+                const newId = id + '-' + bytesToHex(crypto.getRandomValues(new Uint8Array(3)));
+                const stored = await storeImage(env, newId, img);
+                if (stored.error) return json({ error: stored.error }, 400);
+                newUrl = stored.url;
+            } else if (/^https?:\/\/\S{1,2000}$/i.test(img)) {
+                newUrl = img;
+            } else {
+                return json({ error: 'Gambar tidak valid.' }, 400);
+            }
+            const old = String(list[idx].imageUrl || '');
+            if (old.startsWith('/img/') && old !== newUrl) oldImageId = old.slice('/img/'.length);
+            updated.imageUrl = newUrl;
+        }
+
         list[idx] = updated;
         await env.PROMOS.put('promos', JSON.stringify(list));
+        if (oldImageId) await env.PROMOS.delete('img:' + oldImageId);
         return json({ promo: updated });
     }
 
@@ -303,7 +356,7 @@ async function handleApi(request, env, url) {
         const target = list.find(p => p.id === id);
         if (!target) return json({ error: 'Promo tidak ditemukan.' }, 404);
         await env.PROMOS.put('promos', JSON.stringify(list.filter(p => p.id !== id)));
-        if (String(target.imageUrl).startsWith('/img/')) await env.PROMOS.delete('img:' + id);
+        if (String(target.imageUrl).startsWith('/img/')) await env.PROMOS.delete('img:' + String(target.imageUrl).slice('/img/'.length));
         return json({ ok: true });
     }
 
