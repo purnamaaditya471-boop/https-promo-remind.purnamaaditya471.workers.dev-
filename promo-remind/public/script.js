@@ -851,6 +851,7 @@ function renderCarousel() {
     if (slideCounterText) slideCounterText.textContent = `${currentSlideIndex + 1} dari ${filteredPromos.length}`;
     if (prevBtn) prevBtn.disabled = filteredPromos.length <= 1;
     if (nextBtn) nextBtn.disabled = filteredPromos.length <= 1;
+    highlightActiveRow();
 }
 
 window.nextSlide = function () {
@@ -895,15 +896,26 @@ function renderTable() {
 
     const isLogged = isAdminLoggedIn();
 
-    filteredPromos.forEach((promo) => {
+    filteredPromos.forEach((promo, idx) => {
         const tr = document.createElement('tr');
-        tr.className = 'hover:bg-slate-900/40 transition';
+        tr.className = 'promo-row transition';
+        tr.dataset.idx = idx;
+        tr.tabIndex = 0;
+        tr.setAttribute('role', 'button');
+        tr.setAttribute('aria-label', 'Tampilkan poster: ' + promo.title);
+        tr.addEventListener('click', () => window.selectPromoFromList(idx));
+        tr.addEventListener('keydown', (e) => {
+            if ((e.key === 'Enter' || e.key === ' ') && e.target === tr) {
+                e.preventDefault();
+                window.selectPromoFromList(idx);
+            }
+        });
 
         const actionCellHtml = isLogged 
-            ? `<button onclick="window.askEditPromo('${promo.id}')" class="text-indigo-400 hover:text-indigo-300 p-1.5 rounded-lg hover:bg-indigo-500/10 transition" title="Edit Promo">
+            ? `<button onclick="event.stopPropagation(); window.askEditPromo('${promo.id}')" class="text-indigo-400 hover:text-indigo-300 p-1.5 rounded-lg hover:bg-indigo-500/10 transition" title="Edit Promo">
                     <svg class="icon" aria-hidden="true"><use href="#i-s-pen-to-square"/></svg>
                </button>
-               <button onclick="window.askDeletePromo('${promo.id}')" class="text-rose-400 hover:text-rose-300 p-1.5 rounded-lg hover:bg-rose-500/10 transition" title="Hapus Promo">
+               <button onclick="event.stopPropagation(); window.askDeletePromo('${promo.id}')" class="text-rose-400 hover:text-rose-300 p-1.5 rounded-lg hover:bg-rose-500/10 transition" title="Hapus Promo">
                     <svg class="icon" aria-hidden="true"><use href="#i-s-trash-can"/></svg>
                </button>`
             : `<span class="text-slate-600 text-[11px] flex items-center justify-end gap-1" title="Hanya Admin yang dapat mengubah">
@@ -921,6 +933,45 @@ function renderTable() {
         `;
         tableBody.appendChild(tr);
     });
+    highlightActiveRow();
+}
+
+/* Klik baris daftar -> POP menampilkan promo yang sama */
+window.selectPromoFromList = function (idx) {
+    if (idx < 0 || idx >= filteredPromos.length) return;
+    currentSlideIndex = idx;
+    renderCarousel();
+    // Di HP poster ada di atas daftar: gulir ke poster supaya langsung terlihat
+    const section = document.getElementById('promoDisplaySection');
+    if (section) {
+        const top = section.getBoundingClientRect().top;
+        if (top < 0 || top > window.innerHeight - 200) {
+            section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+};
+
+/* Tandai baris yang sedang tampil di POP (dipanggil juga saat geser/panah/titik) */
+function highlightActiveRow() {
+    const body = document.getElementById('promoTableBody');
+    if (!body) return;
+    let activeRow = null;
+    body.querySelectorAll('tr.promo-row').forEach((tr) => {
+        const on = Number(tr.dataset.idx) === currentSlideIndex;
+        tr.classList.toggle('is-active', on);
+        if (on) tr.setAttribute('aria-current', 'true'); else tr.removeAttribute('aria-current');
+        if (on) activeRow = tr;
+    });
+    // Jika daftar bisa di-scroll, pastikan baris aktif tidak tersembunyi (hanya di dalam daftar, halaman tidak ikut bergeser)
+    const wrap = document.getElementById('promoTableWrap');
+    if (activeRow && wrap && wrap.classList.contains('promo-scroll')) {
+        const wr = wrap.getBoundingClientRect();
+        const rr = activeRow.getBoundingClientRect();
+        const head = wrap.querySelector('thead');
+        const hh = head ? head.offsetHeight : 0;
+        if (rr.top < wr.top + hh) wrap.scrollTop -= (wr.top + hh - rr.top);
+        else if (rr.bottom > wr.bottom) wrap.scrollTop += (rr.bottom - wr.bottom);
+    }
 }
 
 window.askDeletePromo = function (id) {
